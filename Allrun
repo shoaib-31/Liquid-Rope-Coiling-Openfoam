@@ -1,0 +1,48 @@
+#!/bin/bash
+# ============================================================
+# Allrun - Standard OpenFOAM run script for Liquid Rope Coiling
+# ============================================================
+# Run this from the case directory:
+#   ./Allrun            (serial)
+#   ./Allrun parallel   (parallel, needs decomposeParDict set)
+# ============================================================
+
+cd "${0%/*}" || exit 1  # always run from case directory
+. $WM_PROJECT_DIR/bin/tools/RunFunctions  # source OpenFOAM run functions
+
+MODE="${1:-serial}"
+
+echo "======================================================"
+echo " Liquid Rope Coiling - OpenFOAM Case"
+echo " Mode: $MODE"
+echo "======================================================"
+
+# Step 1: Generate mesh
+runApplication blockMesh
+
+# Step 2: First mesh refinement (±7mm region, full height)
+runApplication topoSet -dict system/topoSetDict1
+runApplication refineMesh -overwrite
+
+# Step 3: Second mesh refinement (±5mm region, finer)
+runApplication topoSet -dict system/topoSetDict2
+runApplication refineMesh -overwrite
+
+# Step 4: Set initial fields (fill nozzle with oil)
+cp 0/alpha.siliconoil.orig 0/alpha.siliconoil
+runApplication setFields
+
+if [ "$MODE" = "parallel" ]; then
+    # Step 5 (parallel): Decompose → Run → Reconstruct
+    runApplication decomposePar
+    runParallel interFoam
+    runApplication reconstructPar
+else
+    # Step 5 (serial): Just run
+    runApplication interFoam
+fi
+
+echo "======================================================"
+echo " Run complete! Open results with:"
+echo "   paraview liquidRopeCoiling.foam"
+echo "======================================================"

@@ -1,0 +1,15 @@
+#!/bin/bash
+# Allclean - Remove all generated files, keep source setup
+cd "${0%/*}" || exit 1
+
+echo "Cleaning case..."
+rm -rf constant/polyMesh
+rm -rf dynamicCode
+rm -rf processor*
+rm -rf 0.*   [1-9] [1-9].* [1-9][0-9] [1-9][0-9].*
+rm -f 0/alpha.siliconoil
+rm -f 0/polyMesh/cellMap
+rm -f log.*
+rm -f liquidRopeCoiling.foam
+touch liquidRopeCoiling.foam
+echo "Done. Case is clean."
