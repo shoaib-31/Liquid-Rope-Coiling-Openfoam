@@ -14,8 +14,8 @@ FoamFile
 }
 // * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * //
 convertToMeters 0.001; //scale
-r1 4.25;// internal box for improved meshing
-r2 4.5;// nozzle radius
+r1 2.12;// internal box for improved meshing
+r2 2.5;// nozzle radius (D_N = 5mm for coiling regime per Rathaur et al.)
 
 x1 #calc "(0.707*($r1))";// inner box coordinates
 x2 #calc "(-0.707*($r1))";
@@ -31,22 +31,22 @@ z4 #calc "(-0.707*($r2))";
 
 
 
-x5 7.5;
-x6 -7.5;
-z5 7.5;
-z6 -7.5;
+x5 5;
+x6 -5;
+z5 5;
+z6 -5;
 
 
-x7 10;
-x8 -10;
-z7 10;
-z8 -10;
+x7 8;
+x8 -8;
+z7 8;
+z8 -8;
 
 
 
-y1 -20;
-y2 -25;
-y3 -105;
+y1 -15;
+y2 -20;
+y3 -60;
 
 
 dx0 0.5;
@@ -203,25 +203,25 @@ blocks
 );
 edges
 (
-   arc 7 6 (0 0 4.5)
-   arc 6 5 (4.5 0 0)
-   arc 5 4 (0 0 -4.5)
-   arc 4 7 (-4.5 0 0)
-   
-   arc 15 14 (0 $y1 4.5)
-   arc 14 13 (4.5 $y1 0)
-   arc 13 12 (0 $y1 -4.5)
-   arc 12 15 (-4.5 $y1 0)
-   
-   arc 23 22 (0 $y2 4.5)
-   arc 22 21 (4.5 $y2 0)
-   arc 21 20 (0 $y2 -4.5)
-   arc 20 23 (-4.5 $y2 0)
+   arc 7 6 (0 0 2.5)
+   arc 6 5 (2.5 0 0)
+   arc 5 4 (0 0 -2.5)
+   arc 4 7 (-2.5 0 0)
 
-   arc 31 30 (0 $y3 4.5)
-   arc 30 29 (4.5 $y3 0)
-   arc 29 28 (0 $y3 -4.5)
-   arc 28 31 (-4.5 $y3 0)
+   arc 15 14 (0 $y1 2.5)
+   arc 14 13 (2.5 $y1 0)
+   arc 13 12 (0 $y1 -2.5)
+   arc 12 15 (-2.5 $y1 0)
+
+   arc 23 22 (0 $y2 2.5)
+   arc 22 21 (2.5 $y2 0)
+   arc 21 20 (0 $y2 -2.5)
+   arc 20 23 (-2.5 $y2 0)
+
+   arc 31 30 (0 $y3 2.5)
+   arc 30 29 (2.5 $y3 0)
+   arc 29 28 (0 $y3 -2.5)
+   arc 28 31 (-2.5 $y3 0)
 );
 boundary
 (

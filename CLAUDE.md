@@ -70,11 +70,11 @@ BTP/
 ## Geometry (from blockMeshDict)
 
 All in mm (convertToMeters 0.001):
-- **Nozzle radius**: 4.5 mm, at y=0 (top)
-- **Nozzle exit**: at y ≈ -25 mm
-- **Fall height to surface**: ~80 mm
-- **Static surface (floor)**: at y = -105 mm
-- **Tank walls**: ±10 mm in x and z (lower), wider at bottom
+- **Nozzle radius**: 2.5 mm (D_N = 5mm), at y=0 (top)
+- **Nozzle exit**: at y = -20 mm
+- **Fall height to surface**: 50 mm
+- **Static surface (floor)**: at y = -70 mm
+- **Tank walls**: ±5 mm in x and z (upper), ±8 mm at bottom
 - **Coordinate system**: y is vertical (gravity in -y direction)
 
 ---
@@ -83,14 +83,13 @@ All in mm (convertToMeters 0.001):
 
 | Property | Silicon Oil | Air |
 |----------|------------|-----|
-| Model | Power-law | Newtonian |
+| Model | Newtonian | Newtonian |
 | Density (ρ) | 920 kg/m³ | 1.2 kg/m³ |
-| Power-law k | 1.28512 m²/s | — |
-| Power-law n | 0.2 (shear-thinning) | — |
-| nuMax | 0.012897 m²/s | — |
-| nuMin | 0.000872 m²/s | — |
-| nu | — | 1.5×10⁻⁵ m²/s |
+| Dynamic viscosity (μ) | 0.15 Pa.s | — |
+| Kinematic viscosity (ν) | 1.63×10⁻⁴ m²/s | 1.5×10⁻⁵ m²/s |
 | Surface tension σ | 0.0187 N/m (oil-air) | |
+
+Note: Rathaur et al. measured SO as essentially Newtonian (n=0.99). Previous power-law n=0.2 was incorrect.
 
 ---
 
@@ -98,15 +97,15 @@ All in mm (convertToMeters 0.001):
 
 ### Full pipeline from scratch:
 ```bash
-# Step 1: Generate mesh (294k → 5.16M cells after 2x refinement)
+# Step 1: Generate mesh (212k → 4.5M cells after 2x refinement)
 docker run --rm --platform linux/amd64 -v /Users/shoaib31/BTP:/case -w /case \
   --entrypoint /bin/bash openfoam/openfoam6-paraview56 \
   -c "source /opt/openfoam6/etc/bashrc; blockMesh"
 
-# Step 2: First refinement (select ±7mm box, refine)
+# Step 2: First refinement (select ±5mm box, refine)
 docker run ... -c "source /opt/openfoam6/etc/bashrc; topoSet -dict system/topoSetDict1 && refineMesh -overwrite"
 
-# Step 3: Second refinement (select ±5mm box, refine again)
+# Step 3: Second refinement (select ±4mm box, refine again)
 docker run ... -c "source /opt/openfoam6/etc/bashrc; topoSet -dict system/topoSetDict2 && refineMesh -overwrite"
 
 # Step 4: Set initial oil region
@@ -140,11 +139,11 @@ docker run --rm --platform linux/amd64 \
 
 | Stage | Cells |
 |-------|-------|
-| After blockMesh | 294,080 |
-| After 1st refineMesh | ~1,031,680 |
-| After 2nd refineMesh | ~5,158,912 |
+| After blockMesh | 212,712 |
+| After 1st refineMesh | ~818,296 |
+| After 2nd refineMesh | ~4,515,304 |
 
-**Cell size in refined jet region**: ~0.125 mm (fine enough to capture the ~9mm diameter nozzle)
+**Cell size in refined jet region**: ~0.088 mm (gives ~7 cells across the rope diameter D_R≈0.63mm)
 
 ---
 
@@ -152,11 +151,12 @@ docker run --rm --platform linux/amd64 \
 
 | Parameter | Value | Meaning |
 |-----------|-------|---------|
-| endTime | 4.5 s (currently 0.1 for test) | Physical time to simulate |
+| endTime | 3.0 s | Physical time to simulate |
 | writeInterval | 0.1 s | How often to save results |
-| maxCo | 0.25 | Courant number limit (stability) |
+| maxCo | 0.3 | Courant number limit (stability) |
+| maxAlphaCo | 0.25 | Alpha Courant number limit |
 | maxDeltaT | 0.01 s | Maximum timestep |
-| PIMPLE correctors | 5 | Pressure-velocity coupling iterations |
+| PIMPLE correctors | 4 | Pressure-velocity coupling iterations |
 
 ---
 
@@ -187,7 +187,24 @@ qstat -u username
 scp -r username@paramganga.iitr.ac.in:~/BTP/[0-9]* /Users/shoaib31/BTP/
 ```
 
-The `job_hpc.sh` script is configured for 48 cores (2 nodes × 24 cores), ~12h walltime.
+The `job_hpc.sh` script is configured for 16 cores (1 node × 16 cores), ~6h walltime.
+
+---
+
+## Running on AWS Spot Instance
+
+```bash
+# Uses aws_spot_run.sh helper script
+./aws_spot_run.sh launch        # Launch c6i.4xlarge spot (~$0.25/hr)
+./aws_spot_run.sh setup <ip>    # Install OpenFOAM 6
+./aws_spot_run.sh upload <ip>   # Upload case files
+./aws_spot_run.sh run <ip>      # Mesh + solve (16 cores parallel)
+./aws_spot_run.sh monitor <ip>  # Watch solver progress
+./aws_spot_run.sh download <ip> # Get results
+./aws_spot_run.sh terminate <id> # Kill instance
+```
+
+Instance: c6i.4xlarge (16 vCPUs, 32GB RAM). Expected cost: ~$0.50-1.00 total for 3s simulation.
 
 ---
 
@@ -208,14 +225,17 @@ The `job_hpc.sh` script is configured for 48 cores (2 nodes × 24 cores), ~12h w
 
 ---
 
-## Current Status (as of April 2026)
+## Current Status (as of May 2026)
 
 - [x] OpenFOAM 6 installed via Docker
-- [x] Mesh generated and refined (5.16M cells)
-- [x] Initial conditions set (silicon oil in nozzle)
-- [x] Test run to t=0.1s completed/in progress (static surface, 1 case)
-- [ ] Full run to t=4.5s (needs HPC or overnight Mac run)
-- [ ] Parametric study: vary H (fall height), viscosity, surface speed
+- [x] First attempt with D_N=9mm, H=80mm — failed (jetting, no coiling, solver stuck at t=2.4s)
+- [x] Case redesigned: D_N=5mm, H=50mm, Newtonian SO (matching Rathaur et al.)
+- [x] Mesh generated and verified (4.5M cells, Mesh OK)
+- [x] setFields verified, render script fixed (full domain view)
+- [x] AWS spot instance script prepared (c6i.4xlarge, 16 cores)
+- [ ] Run simulation to t=3.0s on AWS spot
+- [ ] Render video showing coiling and heap formation
+- [ ] Parametric study: vary H (fall height), surface speed
 - [ ] Quantitative extraction of coiling frequency vs H
 - [ ] Comparison with Rathaur et al. (IIT Roorkee) experimental data
 
@@ -226,8 +246,8 @@ The `job_hpc.sh` script is configured for 48 cores (2 nodes × 24 cores), ~12h w
 - **VOF (Volume of Fluid)**: Method to track oil-air interface. `alpha=1` means 100% oil, `alpha=0` means air
 - **Courant number (Co)**: Measures how far fluid moves per timestep. Must stay < 0.25 for stability
 - **PIMPLE**: Pressure-velocity coupling algorithm used by interFoam
-- **Power-law fluid**: Viscosity depends on shear rate: ν = k × (|∇u|)^(n-1). With n=0.2, it's strongly shear-thinning (gets less viscous when moving fast)
-- **Coiling regimes**: Viscous (low H) → Gravitational → Inertio-gravitational → Inertial (high H)
+- **Newtonian fluid**: Constant viscosity regardless of shear rate. Rathaur's SO has n=0.99 (effectively Newtonian)
+- **Coiling regimes**: Viscous (low H) → Gravitational → Inertio-gravitational → Inertial (high H). For D_N=5mm, H=50mm: coiling regime per Rathaur Fig 5a
 - **p_rgh**: Modified pressure = p − ρgh (removes hydrostatic component, easier numerically)
 
 ---

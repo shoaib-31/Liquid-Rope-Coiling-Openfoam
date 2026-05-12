@@ -24,21 +24,21 @@ solvers
         cAlpha          1;
 
         MULESCorr       yes;
-        nLimiterIter    10;
+        nLimiterIter    5;
 
         solver          smoothSolver;
         smoother        symGaussSeidel;
-        tolerance       1e-8;
+        tolerance       1e-07;
         relTol          0;
     }
 
     p_rgh
     {
         solver          GAMG;
-        tolerance       1e-08;
+        tolerance       1e-07;
         relTol          0.01;
         smoother        DIC;
-        cacheAgglomeration no;
+        cacheAgglomeration yes;
     }
 
     p_rghFinal
@@ -74,11 +74,11 @@ solvers
 PIMPLE
 {
     momentumPredictor no;
-    nCorrectors     5;
-    nOuterCorrectors 2;
+    nCorrectors     3;
+    nOuterCorrectors 1;
     nNonOrthogonalCorrectors 1;
 
-    pRefPoint      (0 0 0.001);
+    pRefPoint      (0.004 -0.01 0.004);
     pRefValue      0;
 }
 

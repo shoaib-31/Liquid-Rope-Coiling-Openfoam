@@ -24,10 +24,9 @@
 # ============================================================
 
 #PBS -N liquidRopeCoiling
-#PBS -l nodes=2:ppn=24
+#PBS -l select=4:ncpus=24:mpiprocs=24
 #PBS -l walltime=12:00:00
-#PBS -l mem=96gb
-#PBS -q workq
+#PBS -q standard
 #PBS -j oe
 #PBS -o liquid_rope_coiling.log
 
@@ -59,13 +58,12 @@ refineMesh -overwrite > log.refineMesh2 2>&1
 cp 0/alpha.siliconoil.orig 0/alpha.siliconoil
 setFields > log.setFields 2>&1
 
-# Step 4: Decompose for parallel (split mesh into 48 parts)
+# Step 4: Decompose for parallel (split mesh into 96 parts)
 decomposePar > log.decomposePar 2>&1
 
 # Step 5: Run parallel interFoam
-NPROCS=$(wc -l < $PBS_NODEFILE)
-echo "Running interFoam on $NPROCS cores..."
-mpirun -np $NPROCS -machinefile $PBS_NODEFILE interFoam -parallel > log.interFoam 2>&1
+echo "Running interFoam on 96 cores..."
+mpirun -np 96 interFoam -parallel > log.interFoam 2>&1
 
 # Step 6: Reconstruct parallel results into single dataset
 reconstructPar > log.reconstructPar 2>&1
